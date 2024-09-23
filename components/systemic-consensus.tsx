@@ -237,7 +237,7 @@ export function SystemicConsensusComponent() {
 
   const HomeButton = () => {
     return (
-      <Button onClick={handleClearDecision} className="w-36">
+      <Button onClick={handleClearDecision} className="w-36 order-first">
         <HomeIcon className="mr-2" /> DecisionMaker
       </Button>
     )
@@ -285,7 +285,7 @@ export function SystemicConsensusComponent() {
   if (!decision && !decisionId) {
     return (
       <div className="container mx-auto p-6 space-y-6">
-        <div className="flex space-x-2 w-full">
+        <div className="flex flex-col md:flex-row gap-x-2 gap-y-4 w-full">
           <HomeButton />
           <CreateDecision onCreateDecision={createNewDecision} />
         </div>
@@ -310,10 +310,10 @@ export function SystemicConsensusComponent() {
   return (
     <>
       <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between space-x-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 items-center justify-between space-x-4 gap-y-4">
           <HomeButton />
           {editingTitle ? (
-            <div className="flex items-center space-x-2 w-full">
+            <div className="flex items-center space-x-2 w-full order-3 md:order-1 col-span-2 md:col-span-4">
               <Input
                 ref={titleInputRef}
                 autoFocus
@@ -327,12 +327,12 @@ export function SystemicConsensusComponent() {
               <Button onClick={() => updateDecisionTitle(decision?.title || "")}>Save</Button>
             </div>
           ) : (
-            <h1 className="text-2xl font-bold text-center group relative cursor-pointer w-full whitespace-nowrap text-ellipsis overflow-hidden" onClick={() => setEditingTitle(true)}>
+            <h1 className="text-2xl font-bold text-center group relative cursor-pointer w-full whitespace-nowrap text-ellipsis overflow-hidden order-3 md:order-2 col-span-2 md:col-span-4" onClick={() => setEditingTitle(true)}>
               {decision?.title || "Decision Title"}
               <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
             </h1>
           )}
-          <div className="flex justify-end w-36">
+          <div className="flex w-full justify-end order-2 md:order-3">
             <SettingsPopover
               userCount={decision?.user_count || 1}
               maxScore={decision?.max_score || 10}
@@ -383,7 +383,7 @@ export function SystemicConsensusComponent() {
           </Card>
         )}
 
-        {filteredOptions && filteredOptions.length === 0 && (
+        {(decision?.veto_enabled && filteredOptions && filteredOptions.length === 0) && (
           <Card className="mt-6 bg-red-100">
             <CardHeader>
               <CardTitle>Vetoes all around!</CardTitle>

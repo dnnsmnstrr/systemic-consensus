@@ -35,8 +35,8 @@ export function CreateDecision({ onCreateDecision }: CreateDecisionProps) {
         placeholder="Enter decision title"
       />
       <Button onClick={handleCreateDecision}>
-        <PlusIcon className="w-4 h-4 mr-2" />
-        New Decision
+        <PlusIcon className="w-4 h-4 sm:mr-2" />
+        <span className="hidden sm:block">New Decision</span>
       </Button>
     </div>
   )
