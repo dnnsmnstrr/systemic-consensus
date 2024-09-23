@@ -186,10 +186,12 @@ export function SystemicConsensusComponent() {
 
   const calculateTotalResistance = (scores: number[]) => scores.reduce((a, b) => a + b, 0)
 
-  const winningOption = decision && decision.options.length > 0
-    ? decision.options.reduce((min, option) =>
-        calculateTotalResistance(option.scores) < calculateTotalResistance(min.scores) ? option : min
-      )
+  const filteredOptions = decision && decision.options.length > 0
+    ? decision.options.filter(option => !decision.veto_enabled || !option.scores.some(score => score === decision.max_score))
+    : []
+
+  const winningOption = filteredOptions.length > 0
+    ? filteredOptions.reduce((min, option) => calculateTotalResistance(option.scores) <= calculateTotalResistance(min.scores) ? option : min)
     : null
 
   const updateDecisionTitle = async (newTitle: string) => {
@@ -377,6 +379,17 @@ export function SystemicConsensusComponent() {
             <CardContent>
               <p className="font-bold">{winningOption.text}</p>
               <p>Total Resistance: {calculateTotalResistance(winningOption.scores)}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {filteredOptions && filteredOptions.length === 0 && (
+          <Card className="mt-6 bg-red-100">
+            <CardHeader>
+              <CardTitle>Vetoes all around!</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>You might want to consider revising your options.</p>
             </CardContent>
           </Card>
         )}

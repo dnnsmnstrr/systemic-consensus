@@ -41,7 +41,7 @@ export function DecisionList({ onSelectDecision }: DecisionListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center h-10">
         <h2 className="text-2xl font-bold">Previous Decisions</h2>
         {decisions.length > 0 && (
           <Button variant="outline" size="sm" onClick={clearAllDecisions}>Clear All</Button>
@@ -64,6 +64,9 @@ export function DecisionList({ onSelectDecision }: DecisionListProps) {
           </CardHeader>
         </Card>
       ))}
+      {!decisions.length && (
+        <div className="text-stone-500">No recent decisions, create a new one above!</div>
+      )}
     </div>
   );
 }
