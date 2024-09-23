@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@radix-ui/react-popover';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +47,7 @@ export function SettingsPopover({
               min="0"
               step="5"
               value={maxScore}
-              onChange={(e) => onUpdateMaxScore(parseInt(e.target.value || maxScore))}
+              onChange={(e) => typeof e.target.value === 'number' ? onUpdateMaxScore(parseInt(e.target.value)) : null}
               className="w-20"
             />
             <Label htmlFor="max-score">Max Score</Label>

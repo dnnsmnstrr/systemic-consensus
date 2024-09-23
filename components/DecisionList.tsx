@@ -58,7 +58,7 @@ export function DecisionList({ onSelectDecision }: DecisionListProps) {
                 Created on {formatDate(decision.createdAt)}
               </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault; removeDecision(decision.id)}}>
+            <Button variant="ghost" size="sm" onClick={() => removeDecision(decision.id)}>
               <TrashIcon className="h-4 w-4 hover:text-red-500 transition-colors" />
             </Button>
           </CardHeader>

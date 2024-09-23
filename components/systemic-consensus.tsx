@@ -4,10 +4,8 @@ import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { supabase } from "../lib/supabase"
-import { HomeIcon, Pencil1Icon, ClipboardIcon, CheckIcon, GearIcon } from '@radix-ui/react-icons'
+import { HomeIcon, Pencil1Icon, ClipboardIcon, CheckIcon } from '@radix-ui/react-icons'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateDecision } from "@/components/CreateDecision"
@@ -61,7 +59,7 @@ export function SystemicConsensusComponent() {
     if (decisionId) {
       const channel = supabase
         .channel(`decision:${decisionId}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "decisions" }, handleDecisionChange)
+        .on("postgres_changes", { event: "*", schema: "public", table: "decisions" }, (payload) => setDecision(payload.new as Decision))
         .subscribe()
 
       return () => {
@@ -95,11 +93,6 @@ export function SystemicConsensusComponent() {
     } finally {
       setLoading(false);
     }
-  }
-
-  const handleDecisionChange = (payload: any) => {
-    console.log("Decision changed:", payload)
-    setDecision(payload.new)
   }
 
   const createNewDecision = async (title: string) => {
@@ -251,8 +244,8 @@ export function SystemicConsensusComponent() {
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center space-x-4 mb-6">
           <HomeButton />
-          <Skeleton className="h-10 w-3/4" /> {/* Title skeleton */}
-          <Skeleton className="h-10 w-20" /> {/* Settings skeleton */}
+          <Skeleton className="h-10 w-full" /> {/* Title skeleton */}
+          <Skeleton className="h-10 w-36" /> {/* Settings skeleton */}
         </div>
         <Skeleton className="h-10 w-full my-6" /> {/* Add option input skeleton */}
         {decisionId && (
@@ -287,15 +280,17 @@ export function SystemicConsensusComponent() {
 
   if (!decision && !decisionId) {
     return (
-      <div className="container mx-auto p-6 space-y-12">
-        <HomeButton />
-        <CreateDecision onCreateDecision={createNewDecision} />
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex space-x-2 w-full">
+          <HomeButton />
+          <CreateDecision onCreateDecision={createNewDecision} />
+        </div>
         <DecisionList onSelectDecision={handleSelectDecision} />
       </div>
     );
   }
 
-  function handleClearDecision(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+  function handleClearDecision(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void {
     event.preventDefault();
     setDecision(null);
     setDecisionId(null);
@@ -320,12 +315,12 @@ export function SystemicConsensusComponent() {
                 autoFocus
                 type="text"
                 value={decision?.title}
-                onChange={(e) => setDecision({ ...decision, title: e.target.value })}
-                onBlur={() => updateDecisionTitle(decision.title)}
-                onKeyPress={(e) => e.key === "Enter" && updateDecisionTitle(decision.title)}
+                onChange={(e) => setDecision({ ...decision, id: decision?.id || decisionId || "", title: e.target.value || "", options: decision?.options || [], user_count: decision?.user_count || 1, max_score: decision?.max_score || 10, veto_enabled: decision?.veto_enabled || false })}
+                onBlur={() => updateDecisionTitle(decision?.title || "")}
+                onKeyPress={(e) => e.key === "Enter" && updateDecisionTitle(decision?.title || "")}
                 className="text-2xl font-bold text-center w-full"
               />
-              <Button onClick={() => updateDecisionTitle(decision.title)}>Save</Button>
+              <Button onClick={() => updateDecisionTitle(decision?.title || "")}>Save</Button>
             </div>
           ) : (
             <h1 className="text-2xl font-bold text-center group relative cursor-pointer w-full whitespace-nowrap text-ellipsis overflow-hidden" onClick={() => setEditingTitle(true)}>
@@ -335,9 +330,9 @@ export function SystemicConsensusComponent() {
           )}
           <div className="flex justify-end w-36">
             <SettingsPopover
-              userCount={decision.user_count}
-              maxScore={decision.max_score}
-              vetoEnabled={decision.veto_enabled}
+              userCount={decision?.user_count || 1}
+              maxScore={decision?.max_score || 10}
+              vetoEnabled={decision?.veto_enabled || false}
               onUpdateUserCount={updateuser_count}
               onUpdateMaxScore={updateMaxScore}
               onToggleVeto={toggleVeto}
@@ -358,13 +353,13 @@ export function SystemicConsensusComponent() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {decision.options.map(option => (
+          {decision?.options.map(option => (
             <DecisionOption
               key={option.id}
               option={option}
-              userCount={decision.user_count}
-              maxScore={decision.max_score}
-              vetoEnabled={decision.veto_enabled}
+              userCount={decision?.user_count || 1}
+              maxScore={decision?.max_score || 10}
+              vetoEnabled={decision?.veto_enabled || false}
               onUpdateOptionText={updateOptionText}
               onUpdateScore={updateScore}
               onDeleteOption={deleteOption}

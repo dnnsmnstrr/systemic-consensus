@@ -1,6 +1,7 @@
 import { useState, KeyboardEvent } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { PlusIcon } from '@radix-ui/react-icons'
 
 type CreateDecisionProps = {
   onCreateDecision: (title: string) => void
@@ -24,20 +25,19 @@ export function CreateDecision({ onCreateDecision }: CreateDecisionProps) {
   }
 
   return (
-    <div className="container mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-center mb-6">Create New Decision</h1>
-      
-      <div className="flex space-x-2">
-        <Input
-          autoFocus
-          type="text"
-          value={newDecisionTitle}
-          onChange={(e) => setNewDecisionTitle(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Enter decision title"
-        />
-        <Button onClick={handleCreateDecision}>Create Decision</Button>
-      </div>
+    <div className="flex space-x-2 w-full">
+      <Input
+        autoFocus
+        type="text"
+        value={newDecisionTitle}
+        onChange={(e) => setNewDecisionTitle(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Enter decision title"
+      />
+      <Button onClick={handleCreateDecision}>
+        <PlusIcon className="w-4 h-4 mr-2" />
+        New Decision
+      </Button>
     </div>
   )
 }
