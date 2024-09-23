@@ -47,7 +47,7 @@ export function SettingsPopover({
               min="0"
               step="5"
               value={maxScore}
-              onChange={(e) => typeof e.target.value === 'number' ? onUpdateMaxScore(parseInt(e.target.value)) : null}
+              onChange={(e) => e.target.value !== '' ? onUpdateMaxScore(parseInt(e.target.value)) : null}
               className="w-20"
             />
             <Label htmlFor="max-score">Max Score</Label>
