@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "../lib/supabase"
+import { Pencil1Icon } from '@radix-ui/react-icons'
 
 type Option = {
   id: number
@@ -29,6 +30,9 @@ export function SystemicConsensusComponent() {
   const [newOption, setNewOption] = useState("")
   const [decisionId, setDecisionId] = useState("")
   const [newDecisionTitle, setNewDecisionTitle] = useState("")
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [editingOptionId, setEditingOptionId] = useState<number | null>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const decisionId = new URLSearchParams(window.location.search).get("id")
@@ -50,6 +54,12 @@ export function SystemicConsensusComponent() {
       }
     }
   }, [decisionId])
+
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+    }
+  }, [editingTitle])
 
   const fetchDecision = async (id: string) => {
     const { data, error } = await supabase
@@ -158,6 +168,23 @@ export function SystemicConsensusComponent() {
       )
     : null
 
+  const updateDecisionTitle = async (newTitle: string) => {
+    if (decision) {
+      await updateDecision({ title: newTitle })
+      setEditingTitle(false)
+    }
+  }
+
+  const updateOptionText = async (optionId: number, newText: string) => {
+    if (decision) {
+      const updatedOptions = decision.options.map(option =>
+        option.id === optionId ? { ...option, text: newText } : option
+      )
+      await updateDecision({ options: updatedOptions })
+      setEditingOptionId(null)
+    }
+  }
+
   if (!decision) {
     return (
       <div className="container mx-auto p-4 space-y-6">
@@ -176,103 +203,146 @@ export function SystemicConsensusComponent() {
   return (
     <>
       <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-2xl font-bold text-center mb-6">{decision.title}</h1>
-      
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Input
-            type="number"
-            min="1"
-            value={decision.user_count}
-            onChange={(e) => updateuser_count(parseInt(e.target.value))}
-            className="w-20"
-          />
-          <Label htmlFor="user-count">Number of Users</Label>
+        {editingTitle ? (
+          <div className="flex items-center space-x-2">
+            <Input
+              ref={titleInputRef}
+              autoFocus
+              type="text"
+              value={decision.title}
+              onChange={(e) => setDecision({ ...decision, title: e.target.value })}
+              onBlur={() => updateDecisionTitle(decision.title)}
+              onKeyPress={(e) => e.key === "Enter" && updateDecisionTitle(decision.title)}
+              className="text-2xl font-bold text-center"
+            />
+            <Button onClick={() => updateDecisionTitle(decision.title)}>Save</Button>
+          </div>
+        ) : (
+          <h1 className="text-2xl font-bold text-center mb-6 group relative cursor-pointer" onClick={() => setEditingTitle(true)}>
+            {decision.title}
+            <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </h1>
+        )}
+        
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Input
+              type="number"
+              min="1"
+              value={decision.user_count}
+              onChange={(e) => updateuser_count(parseInt(e.target.value))}
+              className="w-20"
+            />
+            <Label htmlFor="user-count">Number of Users</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              type="number"
+              min="1"
+              value={decision.max_score}
+              onChange={(e) => updatemax_score(parseInt(e.target.value))}
+              className="w-20"
+            />
+            <Label htmlFor="max-score">Max Score</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={decision.veto_enabled}
+              onCheckedChange={toggleVeto}
+              id="veto-toggle"
+            />
+            <Label htmlFor="veto-toggle">Enable Veto</Label>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Input
-            type="number"
-            min="1"
-            value={decision.max_score}
-            onChange={(e) => updatemax_score(parseInt(e.target.value))}
-            className="w-20"
-          />
-          <Label htmlFor="max-score">Max Score</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={decision.veto_enabled}
-            onCheckedChange={toggleVeto}
-            id="veto-toggle"
-          />
-          <Label htmlFor="veto-toggle">Enable Veto</Label>
-        </div>
-      </div>
 
-      <div className="flex space-x-2">
-        <Input
-          type="text"
-          value={newOption}
-          onChange={(e) => setNewOption(e.target.value)}
-          placeholder="Enter a new option"
-          onKeyPress={(e) => e.key === "Enter" && addOption()}
-        />
-        <Button onClick={addOption}>Add Option</Button>
-      </div>
+        <div className="flex space-x-2">
+          <Input
+            type="text"
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            placeholder="Enter a new option"
+            onKeyDown={(e) => e.key === "Enter" && addOption()}
+          />
+          <Button onClick={addOption}>Add Option</Button>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {decision.options.map(option => (
-          <Card key={option.id}>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {decision.options.map(option => (
+            <Card key={option.id}>
+              <CardHeader>
+                {editingOptionId === option.id ? (
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      autoFocus
+                      type="text"
+                      value={option.text}
+                      onChange={(e) => {
+                        const updatedOptions = decision.options.map(o =>
+                          o.id === option.id ? { ...o, text: e.target.value } : o
+                        )
+                        setDecision({ ...decision, options: updatedOptions })
+                      }}
+                      onBlur={() => updateOptionText(option.id, option.text)}
+                      onKeyDown={(e) => e.key === "Enter" && updateOptionText(option.id, option.text)}
+                    />
+                    <Button onClick={() => updateOptionText(option.id, option.text)}>Save</Button>
+                  </div>
+                ) : (
+                  <CardTitle 
+                    onClick={() => setEditingOptionId(option.id)}
+                    className="group relative cursor-pointer"
+                  >
+                    {option.text}
+                    <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </CardTitle>
+                )}
+              </CardHeader>
+              <CardContent>
+                {Array.from({ length: decision.user_count }, (_, i) => (
+                  <div key={i} className="mb-4">
+                    <Label className="mb-2 block">
+                      User {i + 1} Resistance: {option.scores[i]}
+                      {decision.veto_enabled && option.scores[i] === decision.max_score && " (VETO)"}
+                    </Label>
+                    <Slider
+                      min={0}
+                      max={decision.max_score}
+                      step={1}
+                      value={[option.scores[i]]}
+                      onValueChange={(value) => updateScore(option.id, i, value[0])}
+                    />
+                  </div>
+                ))}
+                <div className="font-bold mt-2">
+                  Total Resistance: {calculateTotalResistance(option.scores)}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {winningOption && (
+          <Card className="mt-6 bg-green-100">
             <CardHeader>
-              <CardTitle>{option.text}</CardTitle>
+              <CardTitle>Winning Option</CardTitle>
             </CardHeader>
             <CardContent>
-              {Array.from({ length: decision.user_count }, (_, i) => (
-                <div key={i} className="mb-4">
-                  <Label className="mb-2 block">
-                    User {i + 1} Resistance: {option.scores[i]}
-                    {decision.veto_enabled && option.scores[i] === decision.max_score && " (VETO)"}
-                  </Label>
-                  <Slider
-                    min={0}
-                    max={decision.max_score}
-                    step={1}
-                    value={[option.scores[i]]}
-                    onValueChange={(value) => updateScore(option.id, i, value[0])}
-                  />
-                </div>
-              ))}
-              <div className="font-bold mt-2">
-                Total Resistance: {calculateTotalResistance(option.scores)}
-              </div>
+              <p className="font-bold">{winningOption.text}</p>
+              <p>Total Resistance: {calculateTotalResistance(winningOption.scores)}</p>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        )}
 
-      {winningOption && (
-        <Card className="mt-6 bg-green-100">
-          <CardHeader>
-            <CardTitle>Winning Option</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-bold">{winningOption.text}</p>
-            <p>Total Resistance: {calculateTotalResistance(winningOption.scores)}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="mt-6">
-        <p>Share this link with others to collaborate:</p>
-        <Input
-          type="text"
-          value={`${window.location.origin}?id=${decisionId}`}
-          readOnly
-          onClick={(e) => (e.target as HTMLInputElement).select()}
-        />
+        <div className="mt-6">
+          <p>Share this link with others to collaborate:</p>
+          <Input
+            type="text"
+            value={`${window.location.origin}?id=${decisionId}`}
+            readOnly
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+        </div>
       </div>
-    </div>
     </>
-    
   )
 }
