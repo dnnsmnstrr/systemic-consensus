@@ -85,6 +85,7 @@ export function SystemicConsensusComponent() {
 
       if (error) throw error;
 
+      storeDecisionInLocalStorage(data.id, data.title)
       setDecision(data);
     } catch (error) {
       console.error("Error fetching decision:", error);
@@ -96,14 +97,15 @@ export function SystemicConsensusComponent() {
   }
 
   const createNewDecision = async (title: string) => {
+    console.log("Creating new decision:", process.env.NEXT_PUBLIC_DEFAULT_USER_COUNT, process.env.NEXT_PUBLIC_DEFAULT_MAX_SCORE)
     try {
       const { data, error } = await supabase
         .from("decisions")
         .insert({ 
           title, 
           options: [], 
-          user_count: process.env.NEXT_DEFAULT_USER_COUNT || 1, 
-          max_score: process.env.NEXT_DEFAULT_MAX_SCORE || 10, 
+          user_count: process.env.NEXT_PUBLIC_DEFAULT_USER_COUNT || 1, 
+          max_score: process.env.NEXT_PUBLIC_DEFAULT_MAX_SCORE || 10, 
           veto_enabled: false 
         })
         .select()
