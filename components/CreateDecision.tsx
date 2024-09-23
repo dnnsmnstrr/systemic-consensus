@@ -26,14 +26,18 @@ export function CreateDecision({ onCreateDecision }: CreateDecisionProps) {
   return (
     <div className="container mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-center mb-6">Create New Decision</h1>
-      <Input
-        type="text"
-        value={newDecisionTitle}
-        onChange={(e) => setNewDecisionTitle(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Enter decision title"
-      />
-      <Button onClick={handleCreateDecision}>Create Decision</Button>
+      
+      <div className="flex space-x-2">
+        <Input
+          autoFocus
+          type="text"
+          value={newDecisionTitle}
+          onChange={(e) => setNewDecisionTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter decision title"
+        />
+        <Button onClick={handleCreateDecision}>Create Decision</Button>
+      </div>
     </div>
   )
 }

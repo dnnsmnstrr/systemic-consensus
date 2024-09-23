@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrashIcon } from '@radix-ui/react-icons';
 
 interface StoredDecision {
@@ -49,8 +49,8 @@ export function DecisionList({ onSelectDecision }: DecisionListProps) {
       </div>
       {decisions.map(decision => (
         <Card key={decision.id} className="cursor-pointer hover:bg-stone-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2">
-            <div onClick={() => onSelectDecision(decision.id)}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-0">
+            <div onClick={() => onSelectDecision(decision.id)} className="py-2 w-full">
               <CardTitle className="text-lg font-bold mb-1">
                 {decision.title}
               </CardTitle>
@@ -58,8 +58,8 @@ export function DecisionList({ onSelectDecision }: DecisionListProps) {
                 Created on {formatDate(decision.createdAt)}
               </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => removeDecision(decision.id)}>
-              <TrashIcon className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault; removeDecision(decision.id)}}>
+              <TrashIcon className="h-4 w-4 hover:text-red-500 transition-colors" />
             </Button>
           </CardHeader>
         </Card>

@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "../lib/supabase"
-import { HomeIcon, Pencil1Icon, ClipboardIcon, CheckIcon } from '@radix-ui/react-icons'
+import { HomeIcon, Pencil1Icon, ClipboardIcon, CheckIcon, GearIcon } from '@radix-ui/react-icons'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateDecision } from "@/components/CreateDecision"
 import { DecisionOption } from "@/components/DecisionOption"
 import { DecisionList } from "@/components/DecisionList"
+import { SettingsPopover } from "@/components/SettingsPopover"
 import { Decision } from "@/lib/types"
 
 export function SystemicConsensusComponent() {
@@ -108,8 +109,8 @@ export function SystemicConsensusComponent() {
         .insert({ 
           title, 
           options: [], 
-          user_count: 1, 
-          max_score: 10, 
+          user_count: process.env.NEXT_DEFAULT_USER_COUNT || 1, 
+          max_score: process.env.NEXT_DEFAULT_MAX_SCORE || 10, 
           veto_enabled: false 
         })
         .select()
@@ -199,6 +200,7 @@ export function SystemicConsensusComponent() {
   const updateDecisionTitle = async (newTitle: string) => {
     if (decision) {
       await updateDecision({ title: newTitle })
+      storeDecisionInLocalStorage(decision.id, newTitle)
       setEditingTitle(false)
     }
   }
@@ -238,7 +240,7 @@ export function SystemicConsensusComponent() {
 
   const HomeButton = () => {
     return (
-      <Button onClick={handleClearDecision} className="absolute top-4 left-4">
+      <Button onClick={handleClearDecision} className="w-36">
         <HomeIcon className="mr-2" /> DecisionMaker
       </Button>
     )
@@ -246,34 +248,34 @@ export function SystemicConsensusComponent() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4 space-y-6">
-        <HomeButton />
-        <Skeleton className="h-12 w-3/4 mx-auto mb-6" /> {/* Title skeleton */}
+      <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center space-x-4 mb-6">
-          <Skeleton className="h-10 w-20" /> {/* User count skeleton */}
-          <Skeleton className="h-10 w-20" /> {/* Max score skeleton */}
-          <Skeleton className="h-6 w-24" /> {/* Veto toggle skeleton */}
+          <HomeButton />
+          <Skeleton className="h-10 w-3/4" /> {/* Title skeleton */}
+          <Skeleton className="h-10 w-20" /> {/* Settings skeleton */}
         </div>
-        <Skeleton className="h-10 w-full mb-6" /> {/* Add option input skeleton */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => ( // Assuming 3 options for skeleton
-            <div key={i} className="border rounded-lg p-4">
-              <Skeleton className="h-6 w-3/4 mb-4" /> {/* Option title skeleton */}
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-10 w-full my-6" /> {/* Add option input skeleton */}
+        {decisionId && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => ( // Assuming 3 options for skeleton
+              <div key={i} className="border rounded-lg p-4">
+                <Skeleton className="h-6 w-3/4 mb-4" /> {/* Option title skeleton */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-6 space-y-6">
         <HomeButton />
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
@@ -285,7 +287,7 @@ export function SystemicConsensusComponent() {
 
   if (!decision && !decisionId) {
     return (
-      <div className="container mx-auto p-4 space-y-6">
+      <div className="container mx-auto p-6 space-y-12">
         <HomeButton />
         <CreateDecision onCreateDecision={createNewDecision} />
         <DecisionList onSelectDecision={handleSelectDecision} />
@@ -308,59 +310,38 @@ export function SystemicConsensusComponent() {
 
   return (
     <>
-      <Button onClick={handleClearDecision} className="absolute top-4 left-4">
-        <HomeIcon className="mr-2" /> DecisionMaker
-      </Button>
-      <div className="container mx-auto p-4 pt-16 md:pt-12 space-y-6">
-        {editingTitle ? (
-          <div className="flex items-center space-x-2">
-            <Input
-              ref={titleInputRef}
-              autoFocus
-              type="text"
-              value={decision?.title}
-              onChange={(e) => setDecision({ ...decision, title: e.target.value })}
-              onBlur={() => updateDecisionTitle(decision.title)}
-              onKeyPress={(e) => e.key === "Enter" && updateDecisionTitle(decision.title)}
-              className="text-2xl font-bold text-center"
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between space-x-4">
+          <HomeButton />
+          {editingTitle ? (
+            <div className="flex items-center space-x-2 w-full">
+              <Input
+                ref={titleInputRef}
+                autoFocus
+                type="text"
+                value={decision?.title}
+                onChange={(e) => setDecision({ ...decision, title: e.target.value })}
+                onBlur={() => updateDecisionTitle(decision.title)}
+                onKeyPress={(e) => e.key === "Enter" && updateDecisionTitle(decision.title)}
+                className="text-2xl font-bold text-center w-full"
+              />
+              <Button onClick={() => updateDecisionTitle(decision.title)}>Save</Button>
+            </div>
+          ) : (
+            <h1 className="text-2xl font-bold text-center group relative cursor-pointer w-full whitespace-nowrap text-ellipsis overflow-hidden" onClick={() => setEditingTitle(true)}>
+              {decision?.title || "Decision Title"}
+              <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </h1>
+          )}
+          <div className="flex justify-end w-36">
+            <SettingsPopover
+              userCount={decision.user_count}
+              maxScore={decision.max_score}
+              vetoEnabled={decision.veto_enabled}
+              onUpdateUserCount={updateuser_count}
+              onUpdateMaxScore={updateMaxScore}
+              onToggleVeto={toggleVeto}
             />
-            <Button onClick={() => updateDecisionTitle(decision.title)}>Save</Button>
-          </div>
-        ) : (
-          <h1 className="text-2xl font-bold text-center mb-6 group relative cursor-pointer" onClick={() => setEditingTitle(true)}>
-            {decision?.title || "Decision Title"}
-            <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </h1>
-        )}
-        
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Input
-              type="number"
-              min="1"
-              value={decision.user_count}
-              onChange={(e) => updateuser_count(parseInt(e.target.value))}
-              className="w-20"
-            />
-            <Label htmlFor="user-count">Number of Users</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Input
-              type="number"
-              min="1"
-              value={decision.max_score}
-              onChange={(e) => updateMaxScore(parseInt(e.target.value))}
-              className="w-20"
-            />
-            <Label htmlFor="max-score">Max Score</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={decision.veto_enabled}
-              onCheckedChange={toggleVeto}
-              id="veto-toggle"
-            />
-            <Label htmlFor="veto-toggle">Enable Veto</Label>
           </div>
         </div>
 
@@ -402,18 +383,19 @@ export function SystemicConsensusComponent() {
             </CardContent>
           </Card>
         )}
-          <Alert className="mx-auto max-w-[600px]">
+
+          <Alert className="mx-auto max-w-[530px] px-4 py-4">
             <p className="text-center">Share this link with others to collaborate:</p>
             <div className="flex items-center justify-center mt-2">
               <Input
                 type="text"
                 value={`${window.location.origin}?id=${decisionId}`}
                 readOnly
-                className="mr-4 max-w-[460px]"
+                className="mr-2 max-w-[490px]"
               />
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={copyToClipboard}
               >

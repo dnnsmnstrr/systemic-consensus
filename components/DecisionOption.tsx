@@ -44,6 +44,7 @@ export function DecisionOption({ option, userCount, maxScore, vetoEnabled, onUpd
     <Card
       onMouseEnter={() => setShowDeleteButton(true)}
       onMouseLeave={() => setShowDeleteButton(false)}
+      className={"border rounded-lg p-4" + (vetoEnabled && option.scores.some(score => score === maxScore) ? " border-red-500" : "")}
     >
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -95,21 +96,23 @@ export function DecisionOption({ option, userCount, maxScore, vetoEnabled, onUpd
         </div>
       </CardHeader>
       <CardContent>
-        {Array.from({ length: userCount }, (_, i) => (
-          <div key={i} className="mb-4">
-            <Label className="mb-2 block">
-              User {i + 1} Resistance: {option.scores[i]}
-              {vetoEnabled && option.scores[i] === maxScore && " (VETO)"}
-            </Label>
-            <Slider
-              min={0}
-              max={maxScore}
-              step={1}
-              value={[option.scores[i]]}
-              onValueChange={(value) => onUpdateScore(option.id, i, value[0])}
-            />
-          </div>
-        ))}
+        <div className="flex flex-col gap-y-2">
+          {Array.from({ length: userCount }, (_, i) => (
+            <div key={i} className="mb-4">
+              <Label className="mb-2 block">
+                User {i + 1} Resistance: {option.scores[i]}
+                {vetoEnabled && option.scores[i] === maxScore && " (VETO)"}
+              </Label>
+              <Slider
+                min={0}
+                max={maxScore}
+                step={1}
+                value={[option.scores[i]]}
+                onValueChange={(value) => onUpdateScore(option.id, i, value[0])}
+              />
+            </div>
+          ))}
+        </div>
         <div className="font-bold mt-2">
           Total Resistance: {calculateTotalResistance(option.scores)}
         </div>
