@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "../lib/supabase"
-import { Pencil1Icon } from '@radix-ui/react-icons'
+import { HomeIcon, Pencil1Icon } from '@radix-ui/react-icons'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateDecision } from "@/components/CreateDecision"
@@ -19,27 +18,35 @@ export function SystemicConsensusComponent() {
   const [decision, setDecision] = useState<Decision | null>(null)
   const [newOption, setNewOption] = useState("")
   const [decisionId, setDecisionId] = useState<string | null>(null)
-  const [newDecisionTitle, setNewDecisionTitle] = useState("")
   const [editingTitle, setEditingTitle] = useState(false)
-  const [editingOptionId, setEditingOptionId] = useState<number | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(true) // Start with loading true
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const checkForDecisionId = async () => {
-      const urlParams = new URLSearchParams(window.location.search)
-      const id = urlParams.get("id")
-      if (id) {
-        setDecisionId(id)
-        await fetchDecision(id)
-      } else {
-        setLoading(false) // No ID, so we're done loading
+      const urlParams = new URLSearchParams(window.location.search);
+      const id = urlParams.get("id");
+      if (id && id !== decisionId) {
+        setDecisionId(id);
+        await fetchDecision(id);
+      } else if (!id) {
+        setDecision(null);
+        setDecisionId(null);
+        setLoading(false);
       }
-    }
+    };
 
-    checkForDecisionId()
-  }, [])
+    checkForDecisionId();
+
+    // Add event listener for popstate
+    window.addEventListener('popstate', checkForDecisionId);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('popstate', checkForDecisionId);
+    };
+  }, [decisionId]);
 
   useEffect(() => {
     if (decisionId) {
@@ -61,21 +68,23 @@ export function SystemicConsensusComponent() {
   }, [editingTitle])
 
   const fetchDecision = async (id: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("decisions")
         .select("*")
         .eq("id", id)
-        .single()
+        .single();
 
-      if (error) throw error
+      if (error) throw error;
 
-      setDecision(data)
+      setDecision(data);
     } catch (error) {
-      console.error("Error fetching decision:", error)
-      setError("Failed to load the decision. Please try again later.")
+      console.error("Error fetching decision:", error);
+      setError("Failed to load the decision. Please try again later.");
+      setDecision(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -84,12 +93,12 @@ export function SystemicConsensusComponent() {
     setDecision(payload.new)
   }
 
-  const createNewDecision = async () => {
+  const createNewDecision = async (title: string) => {
     try {
       const { data, error } = await supabase
         .from("decisions")
         .insert({ 
-          title: newDecisionTitle, 
+          title, 
           options: [], 
           user_count: 1, 
           max_score: 10, 
@@ -140,7 +149,7 @@ export function SystemicConsensusComponent() {
     }
   }
 
-  const updatemax_score = async (newmax_score: number) => {
+  const updateMaxScore = async (newmax_score: number) => {
     if (decision) {
       const updatedOptions = decision.options.map(option => ({
         ...option,
@@ -191,7 +200,13 @@ export function SystemicConsensusComponent() {
         option.id === optionId ? { ...option, text: newText } : option
       )
       await updateDecision({ options: updatedOptions })
-      setEditingOptionId(null)
+    }
+  }
+
+  const deleteOption = async (optionId: number) => {
+    if (decision) {
+      const updatedOptions = decision.options.filter(option => option.id !== optionId);
+      await updateDecision({ options: updatedOptions });
     }
   }
 
@@ -236,16 +251,32 @@ export function SystemicConsensusComponent() {
     return <CreateDecision onCreateDecision={createNewDecision} />
   }
 
+  function handleClearDecision(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+    event.preventDefault();
+    setDecision(null);
+    setDecisionId(null);
+    setNewOption("");
+    setEditingTitle(false);
+    setError(null);
+    
+    // Clear the URL parameter
+    const newUrl = window.location.pathname;
+    window.history.pushState({}, '', newUrl);
+  }
+
   return (
     <>
-      <div className="container mx-auto p-4 space-y-6">
+      <Button onClick={handleClearDecision} className="absolute top-4 left-4">
+        <HomeIcon className="mr-2" /> DecisionMaker
+      </Button>
+      <div className="container mx-auto p-4 pt-16 md:pt-12 space-y-6">
         {editingTitle ? (
           <div className="flex items-center space-x-2">
             <Input
               ref={titleInputRef}
               autoFocus
               type="text"
-              value={decision.title}
+              value={decision?.title}
               onChange={(e) => setDecision({ ...decision, title: e.target.value })}
               onBlur={() => updateDecisionTitle(decision.title)}
               onKeyPress={(e) => e.key === "Enter" && updateDecisionTitle(decision.title)}
@@ -255,7 +286,7 @@ export function SystemicConsensusComponent() {
           </div>
         ) : (
           <h1 className="text-2xl font-bold text-center mb-6 group relative cursor-pointer" onClick={() => setEditingTitle(true)}>
-            {decision.title}
+            {decision?.title || "Decision Title"}
             <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h1>
         )}
@@ -276,7 +307,7 @@ export function SystemicConsensusComponent() {
               type="number"
               min="1"
               value={decision.max_score}
-              onChange={(e) => updatemax_score(parseInt(e.target.value))}
+              onChange={(e) => updateMaxScore(parseInt(e.target.value))}
               className="w-20"
             />
             <Label htmlFor="max-score">Max Score</Label>
@@ -293,6 +324,7 @@ export function SystemicConsensusComponent() {
 
         <div className="flex space-x-2">
           <Input
+            autoFocus
             type="text"
             value={newOption}
             onChange={(e) => setNewOption(e.target.value)}
@@ -312,6 +344,7 @@ export function SystemicConsensusComponent() {
               vetoEnabled={decision.veto_enabled}
               onUpdateOptionText={updateOptionText}
               onUpdateScore={updateScore}
+              onDeleteOption={deleteOption}
             />
           ))}
         </div>
