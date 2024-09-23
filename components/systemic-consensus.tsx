@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateDecision } from "@/components/CreateDecision"
 import { DecisionOption } from "@/components/DecisionOption"
+import { DecisionList } from "@/components/DecisionList"
 import { Decision } from "@/lib/types"
 
 export function SystemicConsensusComponent() {
@@ -22,6 +23,14 @@ export function SystemicConsensusComponent() {
   const titleInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(true) // Start with loading true
   const [error, setError] = useState<string | null>(null)
+
+  const storeDecisionInLocalStorage = (id: string, title: string) => {
+    const storedDecisions = localStorage.getItem('decisions');
+    let decisions = storedDecisions ? JSON.parse(storedDecisions) : [];
+    decisions = decisions.filter((d: { id: string }) => d.id !== id);
+    decisions.unshift({ id, title, createdAt: new Date().toISOString() });
+    localStorage.setItem('decisions', JSON.stringify(decisions));
+  };
 
   useEffect(() => {
     const checkForDecisionId = async () => {
@@ -39,10 +48,8 @@ export function SystemicConsensusComponent() {
 
     checkForDecisionId();
 
-    // Add event listener for popstate
     window.addEventListener('popstate', checkForDecisionId);
 
-    // Cleanup function
     return () => {
       window.removeEventListener('popstate', checkForDecisionId);
     };
@@ -111,6 +118,7 @@ export function SystemicConsensusComponent() {
       setDecisionId(data[0].id)
       setDecision(data[0])
       window.history.pushState({}, "", `?id=${data[0].id}`)
+      storeDecisionInLocalStorage(data[0].id, title)
     } catch (error) {
       console.error("Error creating new decision:", error)
       setError("Failed to create a new decision. Please try again.")
@@ -210,9 +218,24 @@ export function SystemicConsensusComponent() {
     }
   }
 
+  const handleSelectDecision = (id: string) => {
+    window.history.pushState({}, "", `?id=${id}`);
+    setDecisionId(id);
+    fetchDecision(id);
+  };
+
+  const HomeButton = () => {
+    return (
+      <Button onClick={handleClearDecision} className="absolute top-4 left-4">
+        <HomeIcon className="mr-2" /> DecisionMaker
+      </Button>
+    )
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto p-4 space-y-6">
+        <HomeButton />
         <Skeleton className="h-12 w-3/4 mx-auto mb-6" /> {/* Title skeleton */}
         <div className="flex items-center space-x-4 mb-6">
           <Skeleton className="h-10 w-20" /> {/* User count skeleton */}
@@ -239,6 +262,7 @@ export function SystemicConsensusComponent() {
   if (error) {
     return (
       <div className="container mx-auto p-4">
+        <HomeButton />
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
@@ -248,7 +272,13 @@ export function SystemicConsensusComponent() {
   }
 
   if (!decision && !decisionId) {
-    return <CreateDecision onCreateDecision={createNewDecision} />
+    return (
+      <div className="container mx-auto p-4 space-y-6">
+        <HomeButton />
+        <CreateDecision onCreateDecision={createNewDecision} />
+        <DecisionList onSelectDecision={handleSelectDecision} />
+      </div>
+    );
   }
 
   function handleClearDecision(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
