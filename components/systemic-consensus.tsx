@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "../lib/supabase"
-import { HomeIcon, Pencil1Icon } from '@radix-ui/react-icons'
+import { HomeIcon, Pencil1Icon, ClipboardIcon, CheckIcon } from '@radix-ui/react-icons'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateDecision } from "@/components/CreateDecision"
@@ -23,6 +23,7 @@ export function SystemicConsensusComponent() {
   const titleInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(true) // Start with loading true
   const [error, setError] = useState<string | null>(null)
+  const [copySuccess, setCopySuccess] = useState(false)
 
   const storeDecisionInLocalStorage = (id: string, title: string) => {
     const storedDecisions = localStorage.getItem('decisions');
@@ -224,6 +225,17 @@ export function SystemicConsensusComponent() {
     fetchDecision(id);
   };
 
+  const copyToClipboard = async () => {
+    const shareLink = `${window.location.origin}?id=${decisionId}`
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000) // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
+  }
+
   const HomeButton = () => {
     return (
       <Button onClick={handleClearDecision} className="absolute top-4 left-4">
@@ -390,16 +402,29 @@ export function SystemicConsensusComponent() {
             </CardContent>
           </Card>
         )}
-
-        <div className="mt-6">
-          <p>Share this link with others to collaborate:</p>
-          <Input
-            type="text"
-            value={`${window.location.origin}?id=${decisionId}`}
-            readOnly
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-          />
-        </div>
+          <Alert className="mx-auto max-w-[600px]">
+            <p className="text-center">Share this link with others to collaborate:</p>
+            <div className="flex items-center justify-center mt-2">
+              <Input
+                type="text"
+                value={`${window.location.origin}?id=${decisionId}`}
+                readOnly
+                className="mr-4 max-w-[460px]"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={copyToClipboard}
+              >
+                {copySuccess ? (
+                  <CheckIcon className="h-4 w-4" />
+                ) : (
+                  <ClipboardIcon className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </Alert>
       </div>
     </>
   )
