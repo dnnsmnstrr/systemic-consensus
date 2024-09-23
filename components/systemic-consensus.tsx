@@ -11,21 +11,9 @@ import { supabase } from "../lib/supabase"
 import { Pencil1Icon } from '@radix-ui/react-icons'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-
-type Option = {
-  id: number
-  text: string
-  scores: number[]
-}
-
-type Decision = {
-  id: string
-  title: string
-  options: Option[]
-  user_count: number
-  max_score: number
-  veto_enabled: boolean
-}
+import { CreateDecision } from "@/components/CreateDecision"
+import { DecisionOption } from "@/components/DecisionOption"
+import { Decision } from "@/lib/types"
 
 export function SystemicConsensusComponent() {
   const [decision, setDecision] = useState<Decision | null>(null)
@@ -245,18 +233,7 @@ export function SystemicConsensusComponent() {
   }
 
   if (!decision && !decisionId) {
-    return (
-      <div className="container mx-auto p-4 space-y-6">
-        <h1 className="text-2xl font-bold text-center mb-6">Create New Decision</h1>
-        <Input
-          type="text"
-          value={newDecisionTitle}
-          onChange={(e) => setNewDecisionTitle(e.target.value)}
-          placeholder="Enter decision title"
-        />
-        <Button onClick={createNewDecision}>Create Decision</Button>
-      </div>
-    )
+    return <CreateDecision onCreateDecision={createNewDecision} />
   }
 
   return (
@@ -327,56 +304,15 @@ export function SystemicConsensusComponent() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {decision.options.map(option => (
-            <Card key={option.id}>
-              <CardHeader>
-                {editingOptionId === option.id ? (
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      autoFocus
-                      type="text"
-                      value={option.text}
-                      onChange={(e) => {
-                        const updatedOptions = decision.options.map(o =>
-                          o.id === option.id ? { ...o, text: e.target.value } : o
-                        )
-                        setDecision({ ...decision, options: updatedOptions })
-                      }}
-                      onBlur={() => updateOptionText(option.id, option.text)}
-                      onKeyDown={(e) => e.key === "Enter" && updateOptionText(option.id, option.text)}
-                    />
-                    <Button onClick={() => updateOptionText(option.id, option.text)}>Save</Button>
-                  </div>
-                ) : (
-                  <CardTitle 
-                    onClick={() => setEditingOptionId(option.id)}
-                    className="group relative cursor-pointer"
-                  >
-                    {option.text}
-                    <Pencil1Icon className="inline-block ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </CardTitle>
-                )}
-              </CardHeader>
-              <CardContent>
-                {Array.from({ length: decision.user_count }, (_, i) => (
-                  <div key={i} className="mb-4">
-                    <Label className="mb-2 block">
-                      User {i + 1} Resistance: {option.scores[i]}
-                      {decision.veto_enabled && option.scores[i] === decision.max_score && " (VETO)"}
-                    </Label>
-                    <Slider
-                      min={0}
-                      max={decision.max_score}
-                      step={1}
-                      value={[option.scores[i]]}
-                      onValueChange={(value) => updateScore(option.id, i, value[0])}
-                    />
-                  </div>
-                ))}
-                <div className="font-bold mt-2">
-                  Total Resistance: {calculateTotalResistance(option.scores)}
-                </div>
-              </CardContent>
-            </Card>
+            <DecisionOption
+              key={option.id}
+              option={option}
+              userCount={decision.user_count}
+              maxScore={decision.max_score}
+              vetoEnabled={decision.veto_enabled}
+              onUpdateOptionText={updateOptionText}
+              onUpdateScore={updateScore}
+            />
           ))}
         </div>
 
