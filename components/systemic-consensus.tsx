@@ -9,6 +9,8 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "../lib/supabase"
 import { Pencil1Icon } from '@radix-ui/react-icons'
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 type Option = {
   id: number
@@ -28,18 +30,27 @@ type Decision = {
 export function SystemicConsensusComponent() {
   const [decision, setDecision] = useState<Decision | null>(null)
   const [newOption, setNewOption] = useState("")
-  const [decisionId, setDecisionId] = useState("")
+  const [decisionId, setDecisionId] = useState<string | null>(null)
   const [newDecisionTitle, setNewDecisionTitle] = useState("")
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingOptionId, setEditingOptionId] = useState<number | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(true) // Start with loading true
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const decisionId = new URLSearchParams(window.location.search).get("id")
-    if (decisionId) {
-      setDecisionId(decisionId)
-      fetchDecision(decisionId)
+    const checkForDecisionId = async () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const id = urlParams.get("id")
+      if (id) {
+        setDecisionId(id)
+        await fetchDecision(id)
+      } else {
+        setLoading(false) // No ID, so we're done loading
+      }
     }
+
+    checkForDecisionId()
   }, [])
 
   useEffect(() => {
@@ -62,16 +73,21 @@ export function SystemicConsensusComponent() {
   }, [editingTitle])
 
   const fetchDecision = async (id: string) => {
-    const { data, error } = await supabase
-      .from("decisions")
-      .select("*")
-      .eq("id", id)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from("decisions")
+        .select("*")
+        .eq("id", id)
+        .single()
 
-    if (error) {
-      console.error("Error fetching decision:", error)
-    } else {
+      if (error) throw error
+
       setDecision(data)
+    } catch (error) {
+      console.error("Error fetching decision:", error)
+      setError("Failed to load the decision. Please try again later.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -81,23 +97,26 @@ export function SystemicConsensusComponent() {
   }
 
   const createNewDecision = async () => {
-    const { data, error } = await supabase
-      .from("decisions")
-      .insert({ 
-        title: newDecisionTitle, 
-        options: [], 
-        user_count: 1, 
-        max_score: 10, 
-        veto_enabled: false 
-      })
-      .select()
+    try {
+      const { data, error } = await supabase
+        .from("decisions")
+        .insert({ 
+          title: newDecisionTitle, 
+          options: [], 
+          user_count: 1, 
+          max_score: 10, 
+          veto_enabled: false 
+        })
+        .select()
 
-    if (error) {
-      console.error("Error creating new decision:", error)
-    } else {
+      if (error) throw error
+
       setDecisionId(data[0].id)
       setDecision(data[0])
       window.history.pushState({}, "", `?id=${data[0].id}`)
+    } catch (error) {
+      console.error("Error creating new decision:", error)
+      setError("Failed to create a new decision. Please try again.")
     }
   }
 
@@ -150,13 +169,16 @@ export function SystemicConsensusComponent() {
   }
 
   const updateDecision = async (updates: Partial<Decision>) => {
-    const { error } = await supabase
-      .from("decisions")
-      .update(updates)
-      .eq("id", decisionId)
+    try {
+      const { error } = await supabase
+        .from("decisions")
+        .update(updates)
+        .eq("id", decisionId)
 
-    if (error) {
+      if (error) throw error
+    } catch (error) {
       console.error("Error updating decision:", error)
+      setError("Failed to update the decision. Please try again.")
     }
   }
 
@@ -185,7 +207,44 @@ export function SystemicConsensusComponent() {
     }
   }
 
-  if (!decision) {
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 space-y-6">
+        <Skeleton className="h-12 w-3/4 mx-auto mb-6" /> {/* Title skeleton */}
+        <div className="flex items-center space-x-4 mb-6">
+          <Skeleton className="h-10 w-20" /> {/* User count skeleton */}
+          <Skeleton className="h-10 w-20" /> {/* Max score skeleton */}
+          <Skeleton className="h-6 w-24" /> {/* Veto toggle skeleton */}
+        </div>
+        <Skeleton className="h-10 w-full mb-6" /> {/* Add option input skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => ( // Assuming 3 options for skeleton
+            <div key={i} className="border rounded-lg p-4">
+              <Skeleton className="h-6 w-3/4 mb-4" /> {/* Option title skeleton */}
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (!decision && !decisionId) {
     return (
       <div className="container mx-auto p-4 space-y-6">
         <h1 className="text-2xl font-bold text-center mb-6">Create New Decision</h1>
